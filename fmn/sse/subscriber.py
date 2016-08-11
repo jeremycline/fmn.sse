@@ -45,8 +45,9 @@ class SSESubscriber:
             self.logger.info(payload)
             connections = self.get_connections(key=key)
             for req in connections:
-                self.logger.info(req)
+                #self.logger.info(req)
                 self.push_sse(payload, req)
+            self.logger.info("Total Connections: " + str(len(connections)))
 
     def get_payload(self, key):
         '''
@@ -62,6 +63,7 @@ class SSESubscriber:
         fq = FeedQueue(host=host, exchange=exchange, expire_ms=expire_ms,
                        queue_name=queue_name, port=port)
         data = fq.receive_one_message()
+        fq = None
         if data:
             return str(data)
         else:
@@ -81,7 +83,7 @@ class SSESubscriber:
         else:
             self.connections[key[0]] = {}
             self.connections[key[0]][key[1]] = [con]
-        self.logger.info('Succesfully added a connection ' + str(con))
+        #self.logger.info('Succesfully added a connection ' + str(con))
         if not self.does_loopingcall_exist(key=key):
             self.add_looping_call(key)
 
@@ -91,7 +93,7 @@ class SSESubscriber:
         :param key:
         :return:
         '''
-        self.logger.info("Removing connection")
+        #self.logger.info("Removing connection")
         self.connections[key[0]][key[1]].remove(con)
         if not self.check_if_connections_exist_for_queue(key):
             self.stop_looping_call(key)
