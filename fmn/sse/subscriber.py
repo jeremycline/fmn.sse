@@ -14,6 +14,10 @@ class SSESubscriber:
     def __init__(self, log=None):
         self.connections = {}
         self.looping_calls = {}
+        self.feedqueue = {}
+        self.host = Config.get('fmn.sse.pika.host', 'localhost')
+        self.expire_ms = int(Config.get('fmn.sse.pika.msg_expiration', 3600000))
+        self.port = int(Config.get('fmn.sse.pika.port', 5672))
 
         if log:
             self.logger = log
@@ -45,25 +49,38 @@ class SSESubscriber:
             self.logger.info(payload)
             connections = self.get_connections(key=key)
             for req in connections:
-                #self.logger.info(req)
+                #self.logger.debug(req)
                 self.push_sse(payload, req)
             self.logger.info("Total Connections: " + str(len(connections)))
+
+    def get_feedqueue(self, key):
+        exchange = key[0]
+        queue_name = key[1]
+
+        if queue_name in self.feedqueue:
+            return self.feedqueue[queue_name]
+        else:
+            fq = FeedQueue(host=self.host, exchange=exchange,
+                           expire_ms=self.expire_ms, queue_name=queue_name,
+                           port=self.port)
+
+            self.feedqueue[queue_name] = fq
+            return fq
+
+    def remove_feedqueue(self, key):
+        fq = self.feedqueue.pop([key[1]])
+        fq.channel.close()
+        fq.connection.close()
 
     def get_payload(self, key):
         '''
         :param key: example = ['user', 'bob.id.fedoraproject.org']
         :return: payload which is the message from the queue
         '''
-        host = Config.get('fmn.sse.pika.host', 'localhost')
-        exchange = key[0]  # Config.get('pika', 'exchange')
-        queue_name = key[1]
-        expire_ms = int(Config.get('fmn.sse.pika.msg_expiration', 3600000))
-        port = int(Config.get('fmn.sse.pika.port', 5672))
 
-        fq = FeedQueue(host=host, exchange=exchange, expire_ms=expire_ms,
-                       queue_name=queue_name, port=port)
+        fq = self.get_feedqueue(key=key)
+
         data = fq.receive_one_message()
-        fq = None
         if data:
             return str(data)
         else:
@@ -83,7 +100,7 @@ class SSESubscriber:
         else:
             self.connections[key[0]] = {}
             self.connections[key[0]][key[1]] = [con]
-        #self.logger.info('Succesfully added a connection ' + str(con))
+        #self.logger.debug('Succesfully added a connection ' + str(con))
         if not self.does_loopingcall_exist(key=key):
             self.add_looping_call(key)
 
@@ -93,10 +110,11 @@ class SSESubscriber:
         :param key:
         :return:
         '''
-        #self.logger.info("Removing connection")
+        #self.logger.debug("Removing connection")
         self.connections[key[0]][key[1]].remove(con)
-        if not self.check_if_connections_exist_for_queue(key):
-            self.stop_looping_call(key)
+        if not self.check_if_connections_exist_for_queue(key=key):
+            self.stop_looping_call(key=key)
+            self.remove_feedqueue(key=key)
 
     def get_connections(self, key):
         return self.connections[key[0]][key[1]]
