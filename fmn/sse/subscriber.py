@@ -1,6 +1,8 @@
+import dill
+from pathos.multiprocessing import ProcessingPool as Pool
+
 from twisted.internet import task
 import fedmsg
-from pathos.multiprocessing import ProcessingPool as Pool
 from functools import partial
 from fmn.sse.FeedQueue import FeedQueue
 
@@ -10,6 +12,9 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 global_log = logging.getLogger("fedmsg")
 
+
+def push_sse(msg, conn):
+    conn.write(msg)
 
 class SSESubscriber:
     def __init__(self, log=None):
@@ -24,9 +29,6 @@ class SSESubscriber:
             self.logger = log
         else:
             self.logger = global_log
-
-    def push_sse(self, msg, conn):
-        conn.write(msg)
 
     def format_msg_sse(self, msg):
         try:
@@ -54,8 +56,12 @@ class SSESubscriber:
             connections = self.get_connections(key=key)
             sse_msg = self.format_msg_sse(msg=payload)
             func = partial(push_sse, sse_msg)
+
             pool = Pool()
             pool.map(func, connections)
+            pool.close()
+            pool.join()
+
             self.logger.info("Total Connections: " + str(len(connections)))
 
     def get_feedqueue(self, key):
