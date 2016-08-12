@@ -68,7 +68,7 @@ class SSESubscriber:
             return fq
 
     def remove_feedqueue(self, key):
-        fq = self.feedqueue.pop([key[1]])
+        fq = self.feedqueue.pop(key[1])
         fq.channel.close()
         fq.connection.close()
 
