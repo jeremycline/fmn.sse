@@ -1,5 +1,5 @@
 import dill
-from pathos.multiprocessing import ProcessingPool as Pool
+from pathos.multiprocessing import ProcessingPool
 
 from twisted.internet import task
 import fedmsg
@@ -56,11 +56,10 @@ class SSESubscriber:
             connections = self.get_connections(key=key)
             sse_msg = self.format_msg_sse(msg=payload)
             func = partial(push_sse, sse_msg)
-
-            pool = Pool()
-            pool.map(func, connections)
-            pool.close()
-            pool.join()
+            pp = ProcessingPool()
+            pp.map(func, connections)
+            pp.close()
+            pp.join()
 
             self.logger.info("Total Connections: " + str(len(connections)))
 
