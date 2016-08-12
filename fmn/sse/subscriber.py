@@ -1,6 +1,7 @@
 from twisted.internet import task
 import fedmsg
-
+from pathos.multiprocessing import ProcessingPool as Pool
+from functools import partial
 from fmn.sse.FeedQueue import FeedQueue
 
 Config = fedmsg.config.load_config()
@@ -52,9 +53,9 @@ class SSESubscriber:
             self.logger.info(payload)
             connections = self.get_connections(key=key)
             sse_msg = self.format_msg_sse(msg=payload)
-            for req in connections:
-                #self.logger.debug(req)
-                self.push_sse(sse_msg, req)
+            func = partial(push_sse, sse_msg)
+            pool = Pool()
+            pool.map(func, connections)
             self.logger.info("Total Connections: " + str(len(connections)))
 
     def get_feedqueue(self, key):
