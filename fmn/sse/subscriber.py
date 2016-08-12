@@ -25,6 +25,9 @@ class SSESubscriber:
             self.logger = global_log
 
     def push_sse(self, msg, conn):
+        conn.write(msg)
+
+    def format_msg_sse(self, msg):
         try:
             msg = bytes.decode(msg)
         # This will raise in python2 where msg is a string, not bytes
@@ -37,7 +40,7 @@ class SSESubscriber:
         except:
             pass
 
-        conn.write(event_line)
+        return event_line
 
     def write_messages_all_connections(self, key):
         '''
@@ -48,9 +51,10 @@ class SSESubscriber:
         if payload:
             self.logger.info(payload)
             connections = self.get_connections(key=key)
+            sse_msg = self.format_msg_sse(msg=payload)
             for req in connections:
                 #self.logger.debug(req)
-                self.push_sse(payload, req)
+                self.push_sse(sse_msg, req)
             self.logger.info("Total Connections: " + str(len(connections)))
 
     def get_feedqueue(self, key):
