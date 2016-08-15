@@ -48,14 +48,20 @@ class SSESubscriber:
         :return: None
         '''
         payload = self.get_payload(key=key)
+        sse_msg = ''
+        connections = self.get_connections(key=key)
+
         if payload:
             self.logger.info(payload)
-            connections = self.get_connections(key=key)
             sse_msg = self.format_msg_sse(msg=payload)
-            for req in connections:
-                #self.logger.debug(req)
+
+        for req in connections:
+            # Twisted specific: verify request is still active
+            req.channel.transport.resumeProducing()
+            if payload:
                 self.push_sse(sse_msg, req)
-            self.logger.info("Total Connections: " + str(len(connections)))
+
+        self.logger.info("Total Connections: " + str(len(connections)))
 
     def get_feedqueue(self, key):
         exchange = key[0]
