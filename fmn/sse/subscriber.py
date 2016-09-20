@@ -114,7 +114,6 @@ class SSESubscriber:
         :param key:
         :return:
         '''
-        #self.logger.debug("Removing connection")
         self.connections[key[0]][key[1]].remove(con)
         if not self.check_if_connections_exist_for_queue(key=key):
             self.stop_looping_call(key=key)
