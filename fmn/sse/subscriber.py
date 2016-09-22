@@ -53,7 +53,6 @@ class SSESubscriber:
             connections = self.get_connections(key=key)
             sse_msg = self.format_msg_sse(msg=payload)
             for req in connections:
-                #self.logger.debug(req)
                 self.push_sse(sse_msg, req)
             self.logger.info("Total Connections: " + str(len(connections)))
 
@@ -104,7 +103,6 @@ class SSESubscriber:
         else:
             self.connections[key[0]] = {}
             self.connections[key[0]][key[1]] = [con]
-        #self.logger.debug('Succesfully added a connection ' + str(con))
         if not self.does_loopingcall_exist(key=key):
             self.add_looping_call(key)
 
